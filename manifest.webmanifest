@@ -1,7 +1,7 @@
 {
   "name": "NeverDie 打卡",
   "short_name": "打卡",
-  "start_url": "./?go",
+  "start_url": "./go.html",
   "scope": "./",
   "display": "browser",
   "background_color": "#930000",

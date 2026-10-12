@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>打卡</title>
+<meta name="apple-mobile-web-app-title" content="打卡">
+<meta name="theme-color" content="#930000">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script>
+  // 主畫面圖示開啟的是這一頁：直接跳到打卡系統
+  var TARGET = 'https://script.google.com/a/macros/neverdie.com.tw/s/AKfycbwu3VGLH92BqRMv5mwWD-jrUmZ4s4Aj13bCBDLjtm2Ke837qvD_5tK0FC5sU-dxM0ol/exec';
+  location.replace(TARGET);
+</script>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#930000;color:#fff7d1;
+    font:16px/1.6 "PingFang TC","Microsoft JhengHei",system-ui,sans-serif;padding:16px;text-align:center}
+  a{color:#ffde00}
+</style>
+</head>
+<body>
+  <p>正在開啟打卡系統…<br>沒有反應的話請<a id="link" href="#">點這裡</a></p>
+  <script>document.getElementById('link').href = TARGET;</script>
+</body>
+</html>

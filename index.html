@@ -15,13 +15,10 @@
   // 打卡系統網址
   var TARGET = 'https://script.google.com/a/macros/neverdie.com.tw/s/AKfycbwu3VGLH92BqRMv5mwWD-jrUmZ4s4Aj13bCBDLjtm2Ke837qvD_5tK0FC5sU-dxM0ol/exec';
 
-  // 從主畫面圖示開啟時網址帶有 ?go，直接跳到打卡系統
-  if (/[?&]go\b/.test(location.search)) {
-    location.replace(TARGET);
-  } else {
-    // 第一次開啟：先把網址改成 ?go，這樣「加入主畫面」存下的就是會自動跳轉的網址
-    try { history.replaceState(null, '', location.pathname + '?go'); } catch (e) {}
-  }
+  // 這一頁本身不跳轉。iPhone「加入主畫面」會存下目前網址，
+  // 所以把網址改成 go.html，主畫面圖示開啟的就是負責跳轉的那一頁。
+  // 舊連結若帶了 ?go 也一併清掉，不會再直接跳進系統。
+  try { history.replaceState(null, '', 'go.html'); } catch (e) {}
 </script>
 <style>
   :root{--bg:#930000;--fg:#fff7d1;--accent:#ffde00;--card:rgba(0,0,0,.22)}
