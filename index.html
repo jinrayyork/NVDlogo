@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>打卡</title>
+<meta name="apple-mobile-web-app-title" content="打卡">
+<meta name="application-name" content="打卡">
+<meta name="theme-color" content="#930000">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script>
+  // 打卡系統網址
+  var TARGET = 'https://script.google.com/a/macros/neverdie.com.tw/s/AKfycbwu3VGLH92BqRMv5mwWD-jrUmZ4s4Aj13bCBDLjtm2Ke837qvD_5tK0FC5sU-dxM0ol/exec';
+
+  // 從主畫面圖示開啟時網址帶有 ?go，直接跳到打卡系統
+  if (/[?&]go\b/.test(location.search)) {
+    location.replace(TARGET);
+  } else {
+    // 第一次開啟：先把網址改成 ?go，這樣「加入主畫面」存下的就是會自動跳轉的網址
+    try { history.replaceState(null, '', location.pathname + '?go'); } catch (e) {}
+  }
+</script>
+<style>
+  :root{--bg:#930000;--fg:#fff7d1;--accent:#ffde00;--card:rgba(0,0,0,.22)}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--fg);
+    font:16px/1.6 "PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    display:grid;place-items:center;padding:24px 16px}
+  main{max-width:420px;width:100%;display:grid;gap:20px;text-align:center}
+  img{width:120px;height:120px;border-radius:26px;justify-self:center;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  h1{margin:0;font-size:22px;color:var(--accent)}
+  .go{display:block;background:var(--accent);color:#5a0000;text-decoration:none;font-weight:700;
+    font-size:18px;padding:14px;border-radius:12px;letter-spacing:.06em}
+  .steps{background:var(--card);border-radius:14px;padding:16px 18px;text-align:left;display:grid;gap:12px}
+  .steps h2{margin:0;font-size:15px;color:var(--accent)}
+  ol{margin:0;padding-left:1.3em}
+  li{margin:2px 0}
+  .ios,.android{display:none}
+  .is-ios .ios,.is-android .android,.is-other .ios,.is-other .android{display:block}
+</style>
+</head>
+<body>
+<main>
+  <img src="icon-512.png" alt="">
+  <h1>NeverDie 打卡</h1>
+  <a class="go" id="go" href="#">前往打卡</a>
+
+  <section class="steps">
+    <div class="ios">
+      <h2>iPhone 加到主畫面</h2>
+      <ol>
+        <li>請用 <b>Safari</b> 開啟這一頁</li>
+        <li>點下方的「分享」按鈕</li>
+        <li>選「加入主畫面」，名稱可以改，按「新增」</li>
+      </ol>
+    </div>
+    <div class="android">
+      <h2>Android 加到主畫面</h2>
+      <ol>
+        <li>請用 <b>Chrome</b> 開啟這一頁</li>
+        <li>點右上角「⋮」</li>
+        <li>選「加到主畫面」或「安裝應用程式」</li>
+      </ol>
+    </div>
+    <div style="font-size:14px;opacity:.85">之後點主畫面上的圖示，就會直接開啟打卡系統。</div>
+  </section>
+</main>
+<script>
+  document.getElementById('go').href = TARGET;
+  var ua = navigator.userAgent;
+  var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  document.body.className = isIOS ? 'is-ios' : (/Android/.test(ua) ? 'is-android' : 'is-other');
+</script>
+</body>
+</html>
