@@ -314,7 +314,7 @@
   function render() {
     $('who').textContent = S.me.name + '（' + S.me.email + '）';
     $('logoutBtn').hidden = false;
-    $('coreHint').textContent = '核心時段 ' + S.cfg.coreStart + '–' + S.cfg.coreEnd + '・上班滿 ' + S.cfg.lunchThresholdH + ' 小時自動扣午休 ' + S.cfg.lunchMin + ' 分鐘';
+    $('coreHint').textContent = !S.cfg.flexIn ? '' : '彈性上班 ' + S.cfg.flexIn + '・彈性下班 ' + S.cfg.flexOut + '・每日 ' + S.cfg.dailyH + ' 小時（另扣午休 ' + S.cfg.lunchMin + ' 分鐘）';
 
     ['punchCard', 'myCard', 'fixCard'].forEach(function (id) { $(id).hidden = !S.me.canPunch; });
     ['pendingCard', 'teamCard'].forEach(function (id) { $(id).hidden = !S.me.isManager; });
