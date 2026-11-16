@@ -34,7 +34,10 @@
   body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 "PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif}
   .bar{background:#930000;color:#fff;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px}
   .bar-in{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brands{display:flex;align-items:center;gap:10px;min-width:0}
   .bar img{height:30px;width:auto;display:block}
+  .bar img.rm{height:13px}
+  .bar .x{color:#ffde00;font-size:14px;opacity:.8}
   .bar .who{font-size:12px;opacity:.85;text-align:right}
   .bar button{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;font:inherit;font-size:12px;border-radius:6px;padding:2px 8px;cursor:pointer;margin-top:2px}
   .wrap{max-width:760px;margin:0 auto;padding:16px 16px 48px;display:grid;gap:16px}
@@ -81,7 +84,7 @@
 </head>
 <body>
 <div class="bar"><div class="bar-in">
-  <img src="logo-bar.png" alt="NeverDie">
+  <div class="brands"><img src="logo-bar.png" alt="NeverDie"><span class="x">×</span><img class="rm" src="logo-bar-riseme.png" alt="RiSEME"></div>
   <div class="who"><div id="who"></div><button id="logoutBtn" hidden>登出</button></div>
 </div></div>
 
