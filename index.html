@@ -12,64 +12,393 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <script>
-  // 打卡系統網址
-  var TARGET = 'https://script.google.com/a/macros/neverdie.com.tw/s/AKfycbwu3VGLH92BqRMv5mwWD-jrUmZ4s4Aj13bCBDLjtm2Ke837qvD_5tK0FC5sU-dxM0ol/exec';
-
-  // 這一頁本身不跳轉。iPhone「加入主畫面」會存下目前網址，
-  // 所以把網址改成 go.html，主畫面圖示開啟的就是負責跳轉的那一頁。
-  // 舊連結若帶了 ?go 也一併清掉，不會再直接跳進系統。
-  try { history.replaceState(null, '', 'go.html'); } catch (e) {}
+  /* ─── 要填的兩個值 ─── */
+  // Apps Script「部署作業」的網頁應用程式網址（存取權要設為「所有人」）
+  var API_URL = 'https://script.google.com/macros/s/AKfycbwu3VGLH92BqRMv5mwWD-jrUmZ4s4Aj13bCBDLjtm2Ke837qvD_5tK0FC5sU-dxM0ol/exec';
+  // Google Cloud 建立的 OAuth 用戶端 ID（xxxx.apps.googleusercontent.com）
+  var CLIENT_ID = '565026992827-outdn7hb027dounk7cdt07go54r7g116.apps.googleusercontent.com';
 </script>
+<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
-  :root{--bg:#930000;--fg:#fff7d1;--accent:#ffde00;--card:rgba(0,0,0,.22)}
+  :root{
+    --bg:#f5f3f2; --card:#fff; --fg:#1f1a1a; --muted:#6f6766; --line:#e5dfdd;
+    --brand:#930000; --brand-fg:#fff; --gold:#ffde00; --brand-soft:#f6e3e3;
+    --ok:#1f7a4d; --ok-soft:#e3f3ea; --warn:#9a5b00; --warn-soft:#fbf0dc; --err:#b3261e; --err-soft:#fbe6e4;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --bg:#141111; --card:#1e1919; --fg:#efe9e8; --muted:#a39a99; --line:#352c2c;
+    --brand:#d94a3d; --brand-fg:#fff; --brand-soft:#3a1d1b;
+    --ok:#5cc98e; --ok-soft:#173326; --warn:#e3b052; --warn-soft:#352a14; --err:#f08a80; --err-soft:#3a1a18; color-scheme:dark}}
   *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;background:var(--bg);color:var(--fg);
-    font:16px/1.6 "PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
-    display:grid;place-items:center;padding:24px 16px}
-  main{max-width:420px;width:100%;display:grid;gap:20px;text-align:center}
-  img{width:120px;height:120px;border-radius:26px;justify-self:center;box-shadow:0 8px 24px rgba(0,0,0,.35)}
-  h1{margin:0;font-size:22px;color:var(--accent)}
-  .go{display:block;background:var(--accent);color:#5a0000;text-decoration:none;font-weight:700;
-    font-size:18px;padding:14px;border-radius:12px;letter-spacing:.06em}
-  .steps{background:var(--card);border-radius:14px;padding:16px 18px;text-align:left;display:grid;gap:12px}
-  .steps h2{margin:0;font-size:15px;color:var(--accent)}
-  ol{margin:0;padding-left:1.3em}
-  li{margin:2px 0}
-  .ios,.android{display:none}
-  .is-ios .ios,.is-android .android,.is-other .ios,.is-other .android{display:block}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 "PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif}
+  .bar{background:#930000;color:#fff;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px}
+  .bar-in{max-width:760px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .bar img{height:30px;width:auto;display:block}
+  .bar .who{font-size:12px;opacity:.85;text-align:right}
+  .bar button{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;font:inherit;font-size:12px;border-radius:6px;padding:2px 8px;cursor:pointer;margin-top:2px}
+  .wrap{max-width:760px;margin:0 auto;padding:16px 16px 48px;display:grid;gap:16px}
+  h2{font-size:15px;margin:0 0 10px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .clock{text-align:center;display:grid;gap:4px;justify-items:center}
+  .date{color:var(--muted);font-size:14px}
+  .time{font-family:var(--mono);font-size:clamp(42px,12vw,68px);font-variant-numeric:tabular-nums;line-height:1.1}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;font-size:14px;font-weight:600}
+  .pill::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+  .on{background:var(--ok-soft);color:var(--ok)} .off{background:var(--brand-soft);color:var(--muted)}
+  .big{width:100%;margin-top:16px;border:0;border-radius:12px;padding:16px;font:inherit;font-size:18px;font-weight:700;letter-spacing:.08em;cursor:pointer;background:var(--brand);color:var(--brand-fg)}
+  .big.out{background:var(--fg);color:var(--bg)}
+  button:disabled{opacity:.5;cursor:default}
+  button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px;text-align:center}
+  .msg{padding:10px 12px;border-radius:8px;font-size:14px;white-space:pre-wrap}
+  .msg.ok{background:var(--ok-soft);color:var(--ok)} .msg.err{background:var(--err-soft);color:var(--err)} .msg.warn{background:var(--warn-soft);color:var(--warn)}
+  .tbl{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;color:var(--muted);font-weight:500;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:pre}
+  .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;margin:1px 4px 1px 0;background:var(--warn-soft);color:var(--warn)}
+  .tag.fix{background:var(--brand-soft);color:var(--brand)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+  input,select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+  .btn{display:inline-block;text-decoration:none;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:13px;padding:7px 14px;border-radius:8px;cursor:pointer}
+  .btn.primary{background:var(--brand);color:var(--brand-fg);border-color:var(--brand)}
+  .btn.danger{color:var(--err)}
+  .summary{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .person + .person{margin-top:20px;padding-top:16px;border-top:1px dashed var(--line)}
+  .muted{color:var(--muted)} .empty{color:var(--muted);font-size:14px;padding:8px 0}
+  details summary{cursor:pointer;font-weight:700}
+  .login{display:grid;gap:14px;justify-items:center;text-align:center;padding:32px 20px}
+  .login img{width:96px;height:96px;border-radius:22px}
+  .login h1{font-size:20px;margin:0}
+  #gbtn{min-height:44px}
+  .install ol{margin:6px 0 0;padding-left:1.3em;font-size:14px}
+  [hidden]{display:none!important}
 </style>
 </head>
 <body>
-<main>
-  <img src="icon-512.png" alt="">
-  <h1>NeverDie 打卡</h1>
-  <a class="go" id="go" href="#">前往打卡</a>
+<div class="bar"><div class="bar-in">
+  <img src="logo-bar.png" alt="NeverDie">
+  <div class="who"><div id="who"></div><button id="logoutBtn" hidden>登出</button></div>
+</div></div>
 
-  <section class="steps">
-    <div class="ios">
-      <h2>iPhone 加到主畫面</h2>
-      <ol>
-        <li>請用 <b>Safari</b> 開啟這一頁</li>
-        <li>點下方網址左邊的三條線裡面的「分享」按鈕</li>
-        <li>選「加入主畫面」，名稱可以改，按「新增」</li>
-      </ol>
-    </div>
-    <div class="android">
-      <h2>Android 加到主畫面</h2>
-      <ol>
-        <li>請用 <b>Chrome</b> 開啟這一頁</li>
-        <li>點右上角「⋮」</li>
-        <li>選「加到主畫面」或「安裝應用程式」</li>
-      </ol>
-    </div>
-    <div style="font-size:14px;opacity:.85">之後點主畫面上的圖示，就會直接開啟打卡系統。</div>
+<div class="wrap">
+  <div id="flash" class="msg" hidden></div>
+
+  <section id="loading" class="card"><div class="empty" style="text-align:center">載入中…</div></section>
+
+  <!-- 登入 -->
+  <section id="loginCard" class="card login" hidden>
+    <img src="icon-512.png" alt="">
+    <h1>員工打卡</h1>
+    <div class="muted">請用公司的 Google 帳號登入<br>（neverdie.com.tw 或 riseme.com.tw）</div>
+    <div id="gbtn"></div>
+    <div class="muted" style="font-size:13px">登入一次可維持 30 天</div>
   </section>
-</main>
+
+  <!-- 打卡 -->
+  <section id="punchCard" class="card" hidden>
+    <div class="clock">
+      <div class="date" id="date">—</div>
+      <div class="time" id="time">--:--:--</div>
+      <div class="pill off" id="status">—</div>
+      <div class="muted" id="elapsed"></div>
+    </div>
+    <button class="big" id="punchBtn" disabled>上班打卡</button>
+    <div class="hint" id="coreHint"></div>
+  </section>
+
+  <!-- 我的月紀錄 -->
+  <section id="myCard" class="card" hidden>
+    <div class="summary">
+      <h2 style="margin:0">我的出勤</h2>
+      <input type="month" id="myMonth" style="width:auto">
+    </div>
+    <div class="muted" id="myTotal" style="margin-bottom:8px"></div>
+    <div class="tbl"><table>
+      <thead><tr><th>日期</th><th>上班</th><th>下班</th><th>實際工時</th><th>備註</th></tr></thead>
+      <tbody id="myRows"></tbody>
+    </table></div>
+  </section>
+
+  <!-- 補打卡 -->
+  <section id="fixCard" class="card" hidden>
+    <details>
+      <summary>補打卡申請</summary>
+      <form id="fixForm" style="display:grid;gap:10px;margin-top:12px">
+        <div class="grid">
+          <label>動作<select id="fixAction"><option>上班</option><option>下班</option></select></label>
+          <label>日期<input type="date" id="fixDate" required></label>
+          <label>時間<input type="time" id="fixTime" required></label>
+        </div>
+        <label>原因<textarea id="fixReason" rows="2" placeholder="例：早上網路斷線，10:05 已開始工作" required></textarea></label>
+        <div><button class="btn primary" type="submit">送出申請</button></div>
+      </form>
+      <div id="myReqs" style="margin-top:14px"></div>
+    </details>
+  </section>
+
+  <!-- 管理者：待審 -->
+  <section id="pendingCard" class="card" hidden>
+    <h2>待審補打卡</h2>
+    <div id="pending"></div>
+  </section>
+
+  <!-- 管理者：團隊月報 -->
+  <section id="teamCard" class="card" hidden>
+    <div class="summary">
+      <h2 style="margin:0">團隊月報</h2>
+      <div class="row">
+        <input type="month" id="teamMonth" style="width:auto">
+        <button class="btn" id="buildBtn">產生月報表</button>
+      </div>
+    </div>
+    <div id="reportLinks" class="row" style="margin-bottom:10px" hidden></div>
+    <div id="team"></div>
+  </section>
+
+  <!-- 加到主畫面 -->
+  <section class="card install" id="installCard">
+    <details>
+      <summary>加到手機主畫面</summary>
+      <div id="iosSteps"><b>iPhone（Safari）</b><ol><li>點下方「分享」按鈕</li><li>選「加入主畫面」→「新增」</li></ol></div>
+      <div id="androidSteps" style="margin-top:8px"><b>Android（Chrome）</b><ol><li>點右上角「⋮」</li><li>選「加到主畫面」</li></ol></div>
+    </details>
+  </section>
+</div>
+
 <script>
-  document.getElementById('go').href = TARGET;
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var TZ = 'Asia/Taipei';
+  var KEY = 'punch_session';
+  var S = null, offset = 0, busy = false, gisReady = false;
+
+  var fmt = function (d, o) { return new Intl.DateTimeFormat('zh-TW', Object.assign({ timeZone: TZ }, o)).format(d); };
+  var hhmm = function (m) { return Math.floor(m / 60) + ':' + String(Math.round(m % 60)).padStart(2, '0'); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function getSession() { try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; } }
+  function setSession(v) { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch (e) {} }
+
+  function flash(text, kind) {
+    var f = $('flash'); f.textContent = text; f.className = 'msg ' + kind; f.hidden = false;
+    if (kind === 'ok') setTimeout(function () { f.hidden = true; }, 4000);
+  }
+
+  /* ── 呼叫後端（text/plain 避免跨網域預檢） ── */
+  function api(fn, args, extra) {
+    var body = Object.assign({ fn: fn, args: args || [], session: getSession() }, extra || {});
+    return fetch(API_URL, { method: 'POST', body: JSON.stringify(body), redirect: 'follow' })
+      .then(function (r) { return r.json(); })
+      .catch(function () { throw { message: '連線失敗，請檢查網路後再試一次。' }; })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.auth) { setSession(''); showLogin(); }
+          throw { message: res.error || '發生錯誤，請再試一次。', auth: res.auth };
+        }
+        return res;
+      });
+  }
+
+  function load(fn, args, okText) {
+    busy = true; renderPunch();
+    return api(fn, args).then(function (res) {
+      setState(res.data);
+      if (okText) flash(okText, 'ok');
+    }).catch(function (e) {
+      flash(e.message, 'err');
+    }).then(function () { busy = false; renderPunch(); });
+  }
+
+  function setState(data) {
+    S = data; offset = S.serverNow - Date.now();
+    $('loading').hidden = true; $('loginCard').hidden = true; $('flash').hidden = true;
+    render();
+  }
+
+  /* ── 登入 ── */
+  function showLogin() {
+    S = null;
+    ['loading', 'punchCard', 'myCard', 'fixCard', 'pendingCard', 'teamCard'].forEach(function (id) { $(id).hidden = true; });
+    $('loginCard').hidden = false; $('who').textContent = ''; $('logoutBtn').hidden = true;
+    renderGoogleButton();
+  }
+
+  function renderGoogleButton() {
+    if (!gisReady || $('loginCard').hidden) return;
+    $('gbtn').replaceChildren();
+    google.accounts.id.renderButton($('gbtn'), { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', locale: 'zh-TW', width: 260 });
+  }
+
+  function onCredential(resp) {
+    flash('登入中…', 'warn');
+    api('login', [], { idToken: resp.credential, session: '' }).then(function (res) {
+      setSession(res.session);
+      setState(res.data);
+    }).catch(function (e) { flash(e.message, 'err'); });
+  }
+
+  window.addEventListener('load', function () {
+    var tries = 0;
+    (function wait() {
+      if (window.google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential, ux_mode: 'popup', auto_select: false });
+        gisReady = true; renderGoogleButton();
+      } else if (tries++ < 50) setTimeout(wait, 100);
+      else if (!$('loginCard').hidden) flash('Google 登入元件載入失敗，請重新整理頁面。', 'err');
+    })();
+  });
+
+  $('logoutBtn').addEventListener('click', function () {
+    api('logout', []).catch(function () {});
+    setSession(''); showLogin();
+    if (gisReady) google.accounts.id.disableAutoSelect();
+  });
+
+  /* ── 時鐘與打卡 ── */
+  function tick() {
+    var now = new Date(Date.now() + offset);
+    $('time').textContent = fmt(now, { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+    $('date').textContent = fmt(now, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+    if (S && S.onDuty) $('elapsed').textContent = '已工作 ' + hhmm((now - S.onSince) / 60000);
+  }
+  setInterval(tick, 1000); tick();
+
+  function renderPunch() {
+    if (!S) return;
+    var st = $('status'), btn = $('punchBtn');
+    if (S.onDuty) {
+      st.className = 'pill on';
+      st.textContent = '上班中，' + fmt(new Date(S.onSince), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) + ' 開始';
+      btn.textContent = '下班打卡'; btn.classList.add('out');
+    } else {
+      st.className = 'pill off'; st.textContent = '尚未上班';
+      $('elapsed').textContent = '';
+      btn.textContent = '上班打卡'; btn.classList.remove('out');
+    }
+    btn.disabled = busy;
+  }
+
+  $('punchBtn').addEventListener('click', function () {
+    if (busy || !S) return;
+    var action = S.onDuty ? '下班' : '上班';
+    load('punch', [action], action + '打卡完成 ' + fmt(new Date(Date.now() + offset), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
+  });
+
+  /* ── 表格 ── */
+  function dayRows(tbody, days) {
+    tbody.replaceChildren();
+    if (!days.length) { var tr0 = el('tr'), td0 = el('td', 'empty', '這個月沒有打卡紀錄。'); td0.colSpan = 5; tr0.append(td0); tbody.append(tr0); return; }
+    days.forEach(function (d) {
+      var tr = el('tr');
+      tr.append(el('td', null, d.date.slice(5).replace('-', '/') + '（' + d.weekday + '）'));
+      tr.append(el('td', 'num', d.sessions.map(function (s) { return s.in; }).join('\n')));
+      tr.append(el('td', 'num', d.sessions.map(function (s) { return s.ongoing ? '上班中' : (s.out ? s.outDay + s.out : '—'); }).join('\n')));
+      var net = el('td', 'num', hhmm(d.netMin));
+      if (d.lunchMin) net.title = '已扣午休 ' + d.lunchMin + ' 分鐘';
+      tr.append(net);
+      var note = el('td');
+      if (d.sessions.some(function (s) { return s.fixed; })) note.append(el('span', 'tag fix', '補登'));
+      d.issues.forEach(function (i) { note.append(el('span', 'tag', i)); });
+      tr.append(note);
+      tbody.append(tr);
+    });
+  }
+
+  function render() {
+    $('who').textContent = S.me.name + '（' + S.me.email + '）';
+    $('logoutBtn').hidden = false;
+    $('coreHint').textContent = '核心時段 ' + S.cfg.coreStart + '–' + S.cfg.coreEnd + '・上班滿 ' + S.cfg.lunchThresholdH + ' 小時自動扣午休 ' + S.cfg.lunchMin + ' 分鐘';
+
+    ['punchCard', 'myCard', 'fixCard'].forEach(function (id) { $(id).hidden = !S.me.canPunch; });
+    ['pendingCard', 'teamCard'].forEach(function (id) { $(id).hidden = !S.me.isManager; });
+
+    if (S.me.canPunch) {
+      renderPunch(); tick();
+      $('myMonth').value = S.ym;
+      var net = S.myMonth.reduce(function (a, d) { return a + d.netMin; }, 0);
+      $('myTotal').textContent = S.myMonth.length + ' 天・實際工時 ' + hhmm(net) + ' 小時';
+      dayRows($('myRows'), S.myMonth);
+
+      var box = $('myReqs'); box.replaceChildren();
+      if (S.myRequests.length) {
+        box.append(el('div', 'muted', '我的申請'));
+        S.myRequests.forEach(function (r) {
+          var row = el('div', 'row'); row.style.fontSize = '14px';
+          row.append(el('span', 'num', r.at), el('span', null, r.action), el('span', r.status === '待審' ? 'tag' : 'tag fix', r.status));
+          box.append(row);
+        });
+      }
+    }
+
+    if (S.me.isManager) {
+      var p = $('pending'); p.replaceChildren();
+      if (!S.pending.length) p.append(el('div', 'empty', '沒有待審的申請。'));
+      S.pending.forEach(function (r) {
+        var box = el('div'); box.style.cssText = 'padding:10px 0;border-bottom:1px solid var(--line);display:grid;gap:6px';
+        box.append(el('div', null, r.name + '・' + r.action + '・' + r.at));
+        box.append(el('div', 'muted', '原因：' + r.reason));
+        var row = el('div', 'row');
+        var ok = el('button', 'btn primary', '核准'), no = el('button', 'btn danger', '駁回');
+        ok.onclick = function () { load('reviewRequest', [r.id, true], '已核准，已寫入打卡紀錄'); };
+        no.onclick = function () { load('reviewRequest', [r.id, false], '已駁回'); };
+        row.append(ok, no); box.append(row); p.append(box);
+      });
+
+      $('teamMonth').value = S.ym;
+      var t = $('team'); t.replaceChildren();
+      if (!S.team.length) t.append(el('div', 'empty', '「員工」工作表裡還沒有角色為「員工」的人。'));
+      S.team.forEach(function (m) {
+        var box = el('div', 'person');
+        var head = el('div', 'summary');
+        var name = el('strong', null, m.name + ' ');
+        name.append(el('span', 'pill ' + (m.onDuty ? 'on' : 'off'), m.onDuty ? '上班中' : '未上班'));
+        head.append(name, el('span', 'num', m.days.length + ' 天・' + hhmm(m.totalNetMin) + ' 小時' + (m.issueDays ? '・' + m.issueDays + ' 天異常' : '')));
+        box.append(head);
+        var wrap = el('div', 'tbl'), table = el('table'), tb = el('tbody');
+        table.innerHTML = '<thead><tr><th>日期</th><th>上班</th><th>下班</th><th>實際工時</th><th>備註</th></tr></thead>';
+        table.append(tb); wrap.append(table); box.append(wrap);
+        dayRows(tb, m.days);
+        t.append(box);
+      });
+    }
+  }
+
+  /* ── 事件 ── */
+  $('myMonth').addEventListener('change', function (e) { load('getState', [e.target.value]); });
+  $('teamMonth').addEventListener('change', function (e) { load('getState', [e.target.value]); });
+
+  $('fixForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    load('requestFix', [$('fixAction').value, $('fixDate').value, $('fixTime').value, $('fixReason').value], '已送出申請，等待管理者審核')
+      .then(function () { if ($('flash').classList.contains('ok')) { $('fixForm').reset(); setToday(); } });
+  });
+
+  $('buildBtn').addEventListener('click', function () {
+    var b = $('buildBtn'); b.disabled = true; b.textContent = '產生中…';
+    api('buildMonthSheet', [$('teamMonth').value]).then(function (res) {
+      var r = res.data, box = $('reportLinks'); box.replaceChildren();
+      var a1 = el('a', 'btn', '開啟試算表'); a1.href = r.sheetUrl; a1.target = '_blank'; a1.rel = 'noopener';
+      var a2 = el('a', 'btn primary', '下載 Excel'); a2.href = r.xlsxUrl; a2.target = '_blank'; a2.rel = 'noopener';
+      box.append(a1, a2); box.hidden = false;
+    }).catch(function (e) { flash(e.message, 'err'); })
+      .then(function () { b.disabled = false; b.textContent = '產生月報表'; });
+  });
+
+  function setToday() { $('fixDate').value = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date()); }
+  setToday();
+
   var ua = navigator.userAgent;
   var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  document.body.className = isIOS ? 'is-ios' : (/Android/.test(ua) ? 'is-android' : 'is-other');
+  if (isIOS) $('androidSteps').hidden = true; else if (/Android/.test(ua)) $('iosSteps').hidden = true;
+
+  /* ── 啟動 ── */
+  if (getSession()) load('getState', []).then(function () { if (!S && $('loginCard').hidden) $('loading').firstElementChild.textContent = '無法連線，請重新整理頁面。'; });
+  else showLogin();
+})();
 </script>
 </body>
 </html>
